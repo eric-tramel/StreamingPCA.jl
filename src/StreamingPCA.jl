@@ -1,4 +1,7 @@
 module StreamingPCA
+using Base.LinAlg.BLAS
+
+using ProgressMeter
 
 export streaming_pca
 
