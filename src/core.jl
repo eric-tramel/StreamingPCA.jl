@@ -43,16 +43,27 @@ end
     Stream over samples, update the Q/R as needed if we have enough data to
     warrant a full batch
 """
-function streaming_pca_process_sample!(x::Array{Float64}, 
-                                       Q::Array{Float64}, R::Array{Float64},
-                                       S::Array{Float64}, sBQ::Array{Float64},
-                                       batchSize::Integer,sampleNumber::Integer)
+# function streaming_pca_process_sample!(x::Array{Float64}, 
+#                                        Q::Array{Float64}, R::Array{Float64},
+#                                        S::Array{Float64}, sBQ::Array{Float64},
+#                                        batchSize::Integer,sampleNumber::Integer)
 
-    gemm!('T','N',1/batchSize,x,sBQ[sample,m:],1.0,S)
-    
-end
+#     gemm!('T','N',1/batchSize,x,sBQ[sample,m:],1.0,S)    
+# end
 
-function streaming_pca_process_batch!(batch::Array{Float64},Q::Array{Float64},R::Array{Float64})
+
+"""
+    streaming_pca_process_batch!(batch::Array{Float64},
+                                 Q::Array{Float64},R::Array{Float64})
+
+    # Description
+    Given a current estimate of the QR decomposition of the dataset (the 
+    passed QR values), update this estimate given a new batch of data. This 
+    function will modify the factorization in place. To do this in place, we 
+    will have to use `qrfact!` and the factorization object instead of `qr`.
+"""
+function streaming_pca_process_batch!(batch::Array{Float64},
+                                      Q::Array{Float64},R::Array{Float64})
     numFeatures,batchSize = size(batch)
     rank = size(Q,2)
     S = zeros(numFeatures,rank)
@@ -61,7 +72,7 @@ function streaming_pca_process_batch!(batch::Array{Float64},Q::Array{Float64},R:
     sBQ = scale.*(batch*Q)
 
     for sample in 1:batchSize
-        gemm!('T','N',1.0,batch[sample,:],sBQ[sample,m:],1.0,S)
+        gemm!('T','N',1.0,batch[sample,:],sBQ[sample,:],1.0,S)
     end
 
     Qloc,Rloc = qr(S)
@@ -107,7 +118,8 @@ function streaming_pca(X::Array{Float64}, blockSize::Integer; rank::Integer = 1)
     end
 
     # Now get the data projection
-    XQ = (Q\(X'))'
+    # XQ = (Q\(X'))'
+    XQ = X*Q;
     # What is the order of the components (via norm)?
     sq_pc_energy = vec(sum(XQ.^2,1));
     # Sort components by energy
